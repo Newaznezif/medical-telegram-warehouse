@@ -1,0 +1,12 @@
+python-dotenv
+requests
+pandas
+sqlalchemy
+fastapi
+uvicorn
+pydantic
+dbt-core
+dagster
+pytest
+opencv-python
+torch
