@@ -1,0 +1,8 @@
+﻿version: 2
+
+sources:
+  - name: raw_telegram
+    schema: raw_telegram
+    tables:
+      - name: telegram_messages
+        description: "Raw Telegram messages"
