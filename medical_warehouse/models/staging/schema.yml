@@ -1,0 +1,64 @@
+﻿version: 2
+
+models:
+  - name: stg_telegram_messages
+    description: |
+      Cleaned and standardized Telegram messages from raw data.
+      This staging model applies data quality checks and prepares data for dimensional modeling.
+    columns:
+      - name: message_key
+        description: Surrogate key for the message (hash of message_id + channel_name)
+        tests:
+          - unique
+          - not_null
+      
+      - name: message_id
+        description: Original Telegram message ID
+        tests:
+          - not_null
+      
+      - name: channel_name_clean
+        description: Standardized lowercase channel name
+        tests:
+          - not_null
+      
+      - name: message_date
+        description: Timestamp when message was posted
+        tests:
+          - not_null
+      
+      - name: message_text
+        description: Full text content of the message
+      
+      - name: views_clean
+        description: Number of views (cleaned, non-negative)
+        tests:
+          - not_null
+      
+      - name: forwards_clean
+        description: Number of forwards (cleaned, non-negative)
+        tests:
+          - not_null
+      
+      - name: has_media
+        description: Boolean indicating if message contains media
+        tests:
+          - not_null
+      
+      - name: media_type
+        description: Type of media (photo, document, etc.)
+      
+      - name: has_valid_date
+        description: Data quality flag for valid message date
+        tests:
+          - not_null
+      
+      - name: has_valid_text
+        description: Data quality flag for non-empty message text
+        tests:
+          - not_null
+      
+      - name: has_valid_metrics
+        description: Data quality flag for valid engagement metrics
+        tests:
+          - not_null
