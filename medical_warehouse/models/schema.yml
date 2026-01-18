@@ -1,0 +1,45 @@
+﻿# medical_warehouse/models/schema.yml
+version: 2
+
+models:
+  - name: stg_image_detections
+    description: "Staging table for YOLO image detection results"
+    columns:
+      - name: detection_hash
+        description: "Unique hash identifying each detection"
+        tests:
+          - unique
+          - not_null
+      - name: image_path
+        description: "Full path to the source image"
+      - name: detected_class
+        description: "Object class detected by YOLO"
+      - name: confidence
+        description: "Confidence score (0-1) of the detection"
+        tests:
+          - accepted_values:
+              values: ['>= 0', '<= 1']
+
+  - name: fct_image_detections
+    description: "Fact table aggregating image detection statistics"
+    columns:
+      - name: detection_id
+        description: "Unique identifier for detection aggregation"
+        tests:
+          - unique
+          - not_null
+      - name: channel_name
+        description: "Telegram channel where image was posted"
+      - name: detected_class
+        description: "Type of object detected"
+      - name: detection_count
+        description: "Total number of detections of this class"
+      - name: avg_confidence
+        description: "Average confidence score across detections"
+
+sources:
+  - name: enrichment
+    description: "Raw YOLO detection data"
+    tables:
+      - name: raw_image_detections
+        description: "Raw detection results from YOLO pipeline"

@@ -15,3 +15,7 @@ structlog==24.1.0
 # Testing
 pytest==7.4.4
 pytest-asyncio==0.23.2
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+numpy
+pillow
