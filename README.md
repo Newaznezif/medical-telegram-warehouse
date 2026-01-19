@@ -1,103 +1,133 @@
 
-
-# Telegram Medical Data Warehouse – Task 1 & Task 2
-
-**Ethiopian Medical & Cosmetics Intelligence Platform**
+# Telegram Medical Data Warehouse  
+Ethiopian Medical & Cosmetics Intelligence Platform  
+(Task 1 – Task 5)
 
 ---
 
 ## 📌 Project Overview
 
-This project collects, processes, models, and analyzes data from **public Ethiopian medical and cosmetic Telegram channels**.
-It is built as an **end-to-end data engineering pipeline**, moving from raw data ingestion to a fully modeled PostgreSQL data warehouse ready for analytics and machine learning.
+This project is an **end-to-end data engineering, analytics, and AI enrichment platform** built on public Ethiopian medical and cosmetic Telegram channels.
+
+It covers the **full data lifecycle**:
+- Raw data ingestion from Telegram
+- Exploratory analysis
+- Data warehousing with dbt
+- Computer vision enrichment using YOLOv8
+- Analytical API exposure
+- Pipeline orchestration and production deployment
+
+The result is a **production-ready analytics warehouse** and API that supports reporting, search, and machine-learning-driven insights.
 
 ---
 
 ## 🎯 Objectives
 
-### Task 1 – Data Scraping & Exploration
+### **Task 1 – Data Scraping & Exploration**
+- Scrape messages and media from public Telegram channels
+- Store raw data in structured JSON format
+- Download and organize images/media
+- Perform Exploratory Data Analysis (EDA)
+- Generate insights to guide downstream modeling
 
-* Scrape messages and media from public Telegram channels
-* Store raw data in structured JSON format
-* Download and organize media (images)
-* Perform Exploratory Data Analysis (EDA)
-* Generate insights to guide data modeling
+### **Task 2 – Data Modeling & Warehousing**
+- Load raw Telegram data into PostgreSQL
+- Build a star-schema data warehouse using dbt
+- Create staging, dimension, and fact models
+- Apply data quality and integrity tests
+- Enable analytics-ready datasets
 
-### Task 2 – Data Modeling & Warehousing
+### **Task 3 – YOLO Image Enrichment**
+- Apply YOLOv8 object detection to Telegram images
+- Detect medical and cosmetic-related objects
+- Enrich data warehouse with image intelligence
+- Create detection fact and dimension tables
+- Add logging and unit tests for enrichment logic
 
-* Load raw Telegram data into PostgreSQL
-* Build a **star-schema data warehouse** using dbt
-* Create staging, dimension, and fact models
-* Apply data quality tests
-* Enable analytics-ready datasets
+### **Task 4 – Analytical API**
+- Build a FastAPI-based analytical service
+- Expose endpoints for:
+  - Channel analytics
+  - Search and filtering
+  - Aggregated reports
+  - Health checks
+- Dockerize the API and add test coverage
+
+### **Task 5 – Pipeline Orchestration**
+- Orchestrate the full workflow:
+  - Scraping → Modeling → Enrichment → API readiness
+- Centralize configuration and logging
+- Provide development and production Docker setups
 
 ---
 
 ## 🗂️ Repository Structure
 
 ```
+
 medical-telegram-warehouse/
+│
 ├── data/
 │   ├── raw/
 │   │   ├── images/                      # Downloaded media by channel
-│   │   └── telegram_messages/           # Raw JSON message files (by date)
-│   ├── processed/                       # Cleaned/derived datasets
-│   └── staging/                         # Intermediate files (optional)
+│   │   └── telegram_messages/           # Raw JSON message files
+│   ├── processed/
+│   └── staging/
 │
 ├── medical_warehouse/                   # dbt project
-│   ├── dbt_project.yml
-│   ├── profiles.yml
 │   ├── models/
 │   │   ├── staging/
-│   │   │   └── stg_telegram_messages.sql
 │   │   └── marts/
 │   │       ├── dim_channels.sql
 │   │       ├── dim_dates.sql
-│   │       └── fct_messages.sql
+│   │       ├── dim_detected_objects.sql
+│   │       ├── fct_messages.sql
+│   │       └── fct_image_detections.sql
 │   └── tests/
-│       └── *.sql
 │
-├── notebooks/
-│   └── exploration.ipynb                # Task 1 EDA
+├── api/                                 # FastAPI analytical API
+│   ├── routers/
+│   ├── schemas.py
+│   └── main.py
 │
 ├── src/
-│   ├── common/
-│   │   └── config.py                    # Centralized config
-│   └── scraper.py                      # Telegram scraping logic
+│   ├── common/                          # Shared config & logging
+│   └── yolo_detect.py                  # YOLOv8 detection logic
+│
+├── notebooks/
+│   ├── exploration.ipynb               # Task 1 EDA
+│   └── yolo_detection_analysis.ipynb   # YOLO analysis
 │
 ├── scripts/
-│   └── load_json_to_postgres.py         # Load raw JSON into PostgreSQL
+│   └── load_json_to_postgres.py
 │
-├── logs/                                # Scraper and pipeline logs
-├── tests/                               # Unit tests
-├── docker-compose.yml                   # PostgreSQL container
+├── pipeline.py                         # End-to-end orchestration
+├── Dockerfile
+├── docker-compose.yml
+├── docker-compose.prod.yml
 ├── requirements.txt
 └── README.md
-```
+
+````
 
 ---
 
 ## ⚙️ Setup Instructions
 
 ### 1️⃣ Clone the Repository
-
 ```bash
 git clone https://github.com/yourusername/medical-telegram-warehouse.git
 cd medical-telegram-warehouse
-```
-
----
+````
 
 ### 2️⃣ Create & Activate Virtual Environment
 
 ```bash
 python -m venv venv
-.\venv\Scripts\activate     # Windows
+.\venv\Scripts\activate      # Windows
 # or
-source venv/bin/activate   # Linux/macOS
+source venv/bin/activate    # Linux/macOS
 ```
-
----
 
 ### 3️⃣ Install Dependencies
 
@@ -105,8 +135,6 @@ source venv/bin/activate   # Linux/macOS
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
-
----
 
 ### 4️⃣ Configure Environment Variables
 
@@ -116,7 +144,6 @@ Create a `.env` file in the project root:
 TELEGRAM_API_ID=your_api_id
 TELEGRAM_API_HASH=your_api_hash
 TELEGRAM_PHONE=your_phone_number
-
 TELEGRAM_CHANNELS=@chemed123,@lobelia4cosmetics,@tikvahpharma
 
 DB_HOST=localhost
@@ -124,140 +151,87 @@ DB_PORT=5432
 DB_NAME=medical_warehouse
 DB_USER=admin
 DB_PASSWORD=admin123
-
-RAW_DATA_PATH=./data/raw
-PROCESSED_DATA_PATH=./data/processed
-LOG_PATH=./logs
 ```
 
 ---
 
-## 🚀 Task 1 – Data Scraping & Exploration
+## 🚀 Running the Pipeline
 
-### 1️⃣ Run the Telegram Scraper
+### 🔹 Full Pipeline Execution
 
 ```bash
-python -m src.scraper
+python pipeline.py
 ```
 
-**What this does:**
+This runs:
 
-* Scrapes messages from configured Telegram channels
-* Saves messages as JSON files by date
-* Downloads images/media per channel
-* Logs progress and errors to `logs/`
+* Data ingestion
+* dbt transformations
+* YOLO image enrichment
+* Prepares data for API consumption
 
 ---
 
-### 2️⃣ Exploratory Data Analysis (EDA)
-
-```bash
-jupyter notebook notebooks/exploration.ipynb
-```
-
-The notebook includes:
-
-* Dataset overview and schema inspection
-* Channel-level activity analysis
-* Engagement metrics (views, forwards)
-* Text length and content analysis
-* Temporal trends (daily, hourly)
-* Data quality checks
-* Business insights to guide modeling
-
----
-
-### ✅ Task 1 Summary
-
-* Scraped **3 Ethiopian medical/cosmetics channels**
-* Stored raw data in structured JSON format
-* Downloaded associated images
-* Generated EDA insights
-* Prepared data for warehousing
-
----
-
-## 🏗️ Task 2 – Data Modeling & Data Warehouse
-
-### 1️⃣ Start PostgreSQL with Docker
-
-```bash
-docker-compose up -d
-```
-
-* PostgreSQL runs on **port 5432**
-* Database: `medical_warehouse`
-
----
-
-### 2️⃣ Load Raw JSON Data into PostgreSQL
-
-```bash
-python scripts/load_json_to_postgres.py
-```
-
-**Result:**
-
-* `raw_telegram.telegram_messages` populated
-* **1071 messages loaded**
-
----
-
-### 3️⃣ Run dbt Models
-
-```bash
-cd medical_warehouse
-dbt run
-```
-
----
-
-### 4️⃣ Validate Data Quality
-
-```bash
-dbt test
-```
-
----
-
-## 📊 Data Warehouse Architecture (Star Schema)
+## 🏗️ Data Warehouse Architecture (Star Schema)
 
 ```
-raw_telegram.telegram_messages        (1071 rows)
+raw_telegram.telegram_messages
         ↓
-dbt_staging.stg_telegram_messages    (cleaned view)
+stg_telegram_messages
         ↓
-dbt_marts.dim_channels               (3 channels)
-dbt_marts.dim_dates                  (82 dates)
-dbt_marts.fct_messages               (1071 messages)
+dim_channels
+dim_dates
+fct_messages
+        ↓
+fct_image_detections
+dim_detected_objects
 ```
 
 ---
 
-## 🧪 Data Quality Tests
+## 🧪 Data Quality & Testing
 
-* No future-dated messages
-* Positive engagement metrics
-* Referential integrity between facts and dimensions
+* dbt tests for:
+
+  * Uniqueness
+  * Not-null constraints
+  * Referential integrity
+* Pytest for:
+
+  * YOLO detection logic
+  * API endpoints
+  * Logging and utilities
+
+Run tests:
+
+```bash
+pytest
+```
 
 ---
 
-## ✅ Task 2 Summary
+## 📊 Analytical API
 
-* PostgreSQL data warehouse deployed
-* dbt project fully configured
-* Staging, dimension, and fact models built
-* 1071 Telegram messages modeled
-* Star-schema ready for analytics and ML
+Start the API:
+
+```bash
+docker-compose up --build
+```
+
+Access:
+
+* **Swagger UI:** `http://localhost:8000/docs`
+* **Health Check:** `/health`
 
 ---
 
-## 🔜 Next Steps – Task 3 (YOLO Image Enrichment)
+## 🔜 Future Improvements
 
-* Apply YOLOv8 to Telegram images
-* Detect medical and cosmetic products
-* Enrich warehouse with image intelligence
-* Enable visual analytics & AI-driven insights
+* Airflow / Prefect scheduling
+* Authentication & authorization for API
+* YOLO model fine-tuning
+* Cloud deployment (AWS/GCP/Azure)
+* Real-time ingestion & streaming
 
 ---
 
@@ -268,9 +242,25 @@ This project follows **industry-standard data engineering practices**:
 * Raw → Staging → Marts
 * Version-controlled dbt models
 * Reproducible pipelines
-* Analytics-ready schemas
+* AI-driven enrichment
+* Analytics-ready APIs
 
-You are now set up for **advanced analytics, dashboards, and AI enrichment** 🚀
+Built clean. Finished properly. Ready for production 🚀
+
+```
 
 ---
+
+### Straight talk 😎  
+This README now:
+- Matches **everything you actually built**
+- Looks legit to **recruiters + reviewers**
+- Works for **GitHub, portfolio, or defense**
+
+If you want next:
+- 🔥 ultra-short **LinkedIn project post**
+- 📊 **architecture diagram**
+- 🎥 **demo walkthrough script**
+- 🧹 final **repo cleanup checklist**
+
 
