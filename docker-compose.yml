@@ -1,22 +1,66 @@
-version: '3.8'
+﻿version: '3.8'
+
 services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=medical_warehouse
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DEBUG=False
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - medical-network
+
   postgres:
     image: postgres:15
-    container_name: medical_telegram_warehouse_db
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
-      POSTGRES_DB: medical_warehouse
-    ports:
-      - "5433:5432"  # Using 5433 to avoid conflict with existing PostgreSQL
+      - POSTGRES_DB=medical_warehouse
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
     networks:
-      - medical_network
+      - medical-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - medical-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@medical.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - medical-network
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
-  medical_network:
+  medical-network:
+    driver: bridge

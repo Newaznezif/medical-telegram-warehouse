@@ -1,62 +1,80 @@
+﻿"""
+Shared configuration for Medical Telegram Warehouse
+"""
+from typing import List, Optional
+from pydantic_settings import BaseSettings
+from pydantic import AnyHttpUrl, Field, validator
 import os
 from dotenv import load_dotenv
-from typing import List  # <-- ADD THIS
-from typing import Dict, Any
 
 load_dotenv()
 
-class Config:
-    """Application configuration"""
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables"""
     
-    # Telegram API
-    TELEGRAM_API_ID = os.getenv('TELEGRAM_API_ID')
-    TELEGRAM_API_HASH = os.getenv('TELEGRAM_API_HASH')
-    TELEGRAM_PHONE = os.getenv('TELEGRAM_PHONE')
+    # Project
+    PROJECT_NAME: str = "Medical Telegram Warehouse API"
+    VERSION: str = "1.0.0"
+    ENVIRONMENT: str = Field(default="development", env="ENVIRONMENT")
+    DEBUG: bool = Field(default=False, env="DEBUG")
+    
+    # API
+    HOST: str = Field(default="0.0.0.0", env="HOST")
+    PORT: int = Field(default=8000, env="PORT")
+    
+    # CORS
+    CORS_ORIGINS: List[AnyHttpUrl] = Field(
+        default=[
+            "http://localhost:3000",
+            "http://localhost:8000",
+        ],
+        env="CORS_ORIGINS"
+    )
     
     # Database
-    DB_HOST = os.getenv('DB_HOST', 'localhost')
-    DB_PORT = os.getenv('DB_PORT', '5432')
-    DB_NAME = os.getenv('DB_NAME', 'medical_warehouse')
-    DB_USER = os.getenv('DB_USER', 'admin')
-    DB_PASSWORD = os.getenv('DB_PASSWORD', 'admin123')
+    DATABASE_URL: str = Field(
+        default="postgresql+asyncpg://postgres:postgres@localhost/medical_warehouse",
+        env="DATABASE_URL"
+    )
     
-    # Paths
-    RAW_DATA_PATH = os.getenv('RAW_DATA_PATH', './data/raw')
-    PROCESSED_DATA_PATH = os.getenv('PROCESSED_DATA_PATH', './data/processed')
-    LOG_PATH = os.getenv('LOG_PATH', './logs')
+    # Logging
+    LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
+    LOG_FORMAT: str = Field(default="json", env="LOG_FORMAT")
     
-    # Channels to scrape
-    TELEGRAM_CHANNELS = [
-        channel.strip() 
-        for channel in os.getenv('TELEGRAM_CHANNELS', '').split(',') 
-        if channel.strip()
-    ]
+    # Redis
+    REDIS_URL: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
     
-    @classmethod
-    def validate(cls) -> bool:
-        """Validate required configuration"""
-        required = ['TELEGRAM_API_ID', 'TELEGRAM_API_HASH']
-        missing = [var for var in required if not getattr(cls, var)]
-        
-        if missing:
-            raise ValueError(f"Missing required environment variables: {missing}")
-        return True
+    # File Upload
+    UPLOAD_DIR: str = Field(default="uploads", env="UPLOAD_DIR")
+    MAX_UPLOAD_SIZE: int = Field(default=10 * 1024 * 1024, env="MAX_UPLOAD_SIZE")  # 10MB
     
-    @classmethod
-    def get_database_url(cls) -> str:
-        """Get database connection URL"""
-        return (
-            f"postgresql://{cls.DB_USER}:{cls.DB_PASSWORD}"
-            f"@{cls.DB_HOST}:{cls.DB_PORT}/{cls.DB_NAME}"
-        )
+    # Analytics
+    ANALYTICS_CACHE_TTL: int = Field(default=300, env="ANALYTICS_CACHE_TTL")  # 5 minutes
     
-    @classmethod
-    def get_telegram_channels(cls) -> List[str]:
-        """Get list of channels to scrape"""
-        return cls.TELEGRAM_CHANNELS or [
-            "@CheMed123",
-            "@lobelia4cosmetics", 
-            "@tikvahpharma"
-        ]
+    # YOLO
+    YOLO_MODEL_PATH: str = Field(default="yolov8n.pt", env="YOLO_MODEL_PATH")
+    YOLO_CONFIDENCE_THRESHOLD: float = Field(default=0.5, env="YOLO_CONFIDENCE_THRESHOLD")
+    
+    class Config:
+        case_sensitive = True
+        env_file = ".env"
+    
+    @validator("CORS_ORIGINS", pre=True)
+    def assemble_cors_origins(cls, v):
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",")]
+        return v
 
-config = Config()
+# Global settings instance
+settings = Settings()
+
+# Environment-specific overrides
+if settings.ENVIRONMENT == "production":
+    settings.DEBUG = False
+    settings.LOG_LEVEL = "WARNING"
+elif settings.ENVIRONMENT == "staging":
+    settings.DEBUG = False
+    settings.LOG_LEVEL = "INFO"
+else:  # development
+    settings.DEBUG = True
+    settings.LOG_LEVEL = "DEBUG"
