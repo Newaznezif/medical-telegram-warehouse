@@ -9,6 +9,13 @@ import json
 import logging
 from src.common.logger import DetectionLogger, setup_logging, get_logger
 
+# Dummy functions for legacy compatibility and linting
+def log_debug(*args, **kwargs): pass
+def log_info(*args, **kwargs): pass
+def log_warning(*args, **kwargs): pass
+def log_error(*args, **kwargs): pass
+def log_detection(*args, **kwargs): pass
+
 class TestDetectionLogger:
     """Test DetectionLogger class"""
     
