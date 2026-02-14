@@ -2,6 +2,7 @@
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from typing import Optional
 import logging
 import time
 import os
@@ -125,7 +126,7 @@ async def get_channels():
 async def get_detections(
     limit: int = 50,
     min_confidence: float = 0.5,
-    channel: str = None
+    channel: Optional[str] = None
 ):
     """Get YOLO detection results"""
     # Mock data - will be replaced with database
@@ -141,7 +142,7 @@ async def get_detections(
             "image_name": f"image_{i:03d}.jpg",
             "channel_name": channel_name,
             "detected_class": sample_classes[i % len(sample_classes)],
-            "confidence": round(0.5 + (i * 0.02), 2),
+            "confidence": round(float(0.5 + (i * 0.02)), 2),
             "product_category": "medical" if i % 3 == 0 else "cosmetic",
             "date_str": "2024-01-15",
             "processed_at": "2024-01-15T10:30:00"
@@ -160,7 +161,7 @@ async def get_detections(
         "limit": limit,
         "min_confidence": min_confidence,
         "channel_filter": channel,
-        "detections": detections[:limit]
+        "detections": list(detections)[:limit]
     }
 
 @app.get("/api/v1/detections/stats")
@@ -189,7 +190,7 @@ async def get_detection_stats():
     }
 
 @app.get("/api/v1/messages")
-async def get_messages(limit: int = 50, channel: str = None):
+async def get_messages(limit: int = 50, channel: Optional[str] = None):
     """Get Telegram messages"""
     # Mock data
     messages = []
@@ -217,7 +218,7 @@ async def get_messages(limit: int = 50, channel: str = None):
         "count": len(messages),
         "limit": limit,
         "channel_filter": channel,
-        "messages": messages[:limit]
+        "messages": list(messages)[:limit]
     }
 
 @app.get("/api/v1/search")
