@@ -38,4 +38,5 @@ class Message(BaseModel):
     )
     
     def __repr__(self):
-        return f"<Message {self.message_id[:8]}...>"
+        msg_id_str = str(self.message_id)
+        return f"<Message {msg_id_str[:8]}...>"

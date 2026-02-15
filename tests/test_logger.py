@@ -1,344 +1,97 @@
 ﻿"""
-Tests for the logging utility
+Tests for the loguru-based logging utility in src/common/logger.py
 """
 import pytest
-import tempfile
-import shutil
-from pathlib import Path
+import os
 import json
-import logging
-from src.common.logger import DetectionLogger, setup_logging, get_logger
+from pathlib import Path
+from src.common.logger import (
+    setup_logger, 
+    log_pipeline_start, 
+    log_pipeline_end, 
+    log_task_start, 
+    log_task_end,
+    log_detection_results,
+    log_error_with_context
+)
 
-# Dummy functions for legacy compatibility and linting
-def log_debug(*args, **kwargs): pass
-def log_info(*args, **kwargs): pass
-def log_warning(*args, **kwargs): pass
-def log_error(*args, **kwargs): pass
-def log_detection(*args, **kwargs): pass
+@pytest.fixture
+def temp_log_file(tmp_path):
+    log_file = tmp_path / "test_pipeline.log"
+    return str(log_file)
 
-class TestDetectionLogger:
-    """Test DetectionLogger class"""
+def test_setup_logger(temp_log_file):
+    """Test that setup_logger creates a logger that can write to a file."""
+    logger = setup_logger(name="test_logger", log_file=temp_log_file, enqueue=False)
+    logger.info("Test message")
     
-    def setup_method(self):
-        """Setup test environment"""
-        self.test_dir = tempfile.mkdtemp()
-        self.log_dir = Path(self.test_dir) / "logs"
-    
-    def teardown_method(self):
-        """Cleanup test environment"""
-        shutil.rmtree(self.test_dir)
-    
-    def test_logger_creation(self):
-        """Test creating a logger"""
-        logger = DetectionLogger(
-            name="test_logger",
-            log_dir=str(self.log_dir),
-            level=logging.DEBUG,
-            format_type="simple",
-            console_output=False,
-            file_output=True
-        )
-        
-        assert logger.name == "test_logger"
-        assert logger.logger.level == logging.DEBUG
-        assert len(logger.logger.handlers) == 1  # Only file handler
-        
-        logger.close()
-    
-    def test_logger_with_json_format(self):
-        """Test logger with JSON format"""
-        logger = DetectionLogger(
-            name="json_logger",
-            log_dir=str(self.log_dir),
-            level=logging.INFO,
-            format_type="json",
-            console_output=False,
-            file_output=True
-        )
-        
-        # Log a message with extra data
-        logger.info("Test message", extra={"key1": "value1", "key2": 123})
-        
-        # Get log file
-        log_file = logger.get_log_file_path()
-        assert log_file is not None
-        assert log_file.exists()
-        
-        # Read and parse log entry
-        with open(log_file, 'r') as f:
-            lines = f.readlines()
-            assert len(lines) >= 2  # Initialization + our message
-            
-            # Parse JSON log
-            log_entry = json.loads(lines[-1])
-            assert log_entry['message'] == "Test message"
-            assert log_entry['level'] == "INFO"
-            assert log_entry['key1'] == "value1"
-            assert log_entry['key2'] == 123
-        
-        logger.close()
-    
-    def test_log_detection_method(self):
-        """Test specialized detection logging"""
-        logger = DetectionLogger(
-            name="detection_logger",
-            log_dir=str(self.log_dir),
-            level=logging.INFO,
-            format_type="detailed",
-            console_output=False,
-            file_output=True
-        )
-        
-        logger.log_detection(
-            image_path="/test/image.jpg",
-            detected_class="bottle",
-            confidence=0.85,
-            channel="test_channel",
-            x_center=0.5,
-            y_center=0.5
-        )
-        
-        log_file = logger.get_log_file_path()
-        assert log_file is not None
-        
-        with open(log_file, 'r') as f:
-            content = f.read()
-            assert "bottle" in content
-            assert "0.85" in content
-            assert "test_channel" in content
-        
-        logger.close()
-    
-    def test_log_processing_methods(self):
-        """Test processing start/end logging"""
-        logger = DetectionLogger(
-            name="processing_logger",
-            log_dir=str(self.log_dir),
-            level=logging.INFO,
-            format_type="simple",
-            console_output=False,
-            file_output=True
-        )
-        
-        logger.log_processing_start("test_task", total_items=100)
-        logger.log_processing_end(
-            "test_task",
-            processed_items=95,
-            success_count=90,
-            error_count=5,
-            duration_seconds=10.5
-        )
-        
-        log_file = logger.get_log_file_path()
-        assert log_file is not None
-        
-        with open(log_file, 'r') as f:
-            content = f.read()
-            assert "Starting test_task" in content
-            assert "Completed test_task" in content
-            assert "Processed: 95" in content
-            assert "Success: 90" in content
-            assert "Errors: 5" in content
-            assert "Duration: 10.50s" in content
-        
-        logger.close()
-    
-    def test_log_error_method(self):
-        """Test error logging"""
-        logger = DetectionLogger(
-            name="error_logger",
-            log_dir=str(self.log_dir),
-            level=logging.ERROR,
-            format_type="detailed",
-            console_output=False,
-            file_output=True
-        )
-        
-        try:
-            raise ValueError("Test error message")
-        except Exception as e:
-            logger.log_error(
-                "test_error",
-                "Something went wrong",
-                exception=e,
-                additional_info="test data"
-            )
-        
-        log_file = logger.get_log_file_path()
-        assert log_file is not None
-        
-        with open(log_file, 'r') as f:
-            content = f.read()
-            assert "Error [test_error]" in content
-            assert "Something went wrong" in content
-            assert "ValueError" in content
-            assert "Test error message" in content
-        
-        logger.close()
-    
-    def test_log_performance_method(self):
-        """Test performance metric logging"""
-        logger = DetectionLogger(
-            name="performance_logger",
-            log_dir=str(self.log_dir),
-            level=logging.DEBUG,
-            format_type="simple",
-            console_output=False,
-            file_output=True
-        )
-        
-        logger.log_performance("inference_time", 0.045, unit="seconds")
-        logger.log_performance("accuracy", 0.92)
-        
-        log_file = logger.get_log_file_path()
-        assert log_file is not None
-        
-        with open(log_file, 'r') as f:
-            content = f.read()
-            assert "inference_time = 0.045 seconds" in content
-            assert "accuracy = 0.92" in content
-        
-        logger.close()
-    
-    def test_log_level_changes(self):
-        """Test changing log level"""
-        logger = DetectionLogger(
-            name="level_logger",
-            log_dir=str(self.log_dir),
-            level=logging.WARNING,
-            console_output=False,
-            file_output=True
-        )
-        
-        # Debug message should not appear at WARNING level
-        logger.debug("Debug message")
-        
-        log_file = logger.get_log_file_path()
-        with open(log_file, 'r') as f:
-            content = f.read()
-            assert "Debug message" not in content
-        
-        # Change to DEBUG level
-        logger.set_level(logging.DEBUG)
-        logger.debug("Debug message now")
-        
-        with open(log_file, 'r') as f:
-            content = f.read()
-            assert "Debug message now" in content
-        
-        logger.close()
-    
-    def test_singleton_pattern(self):
-        """Test that get_logger returns singleton"""
-        logger1 = get_logger("singleton_test", log_dir=str(self.log_dir))
-        logger2 = get_logger("singleton_test", log_dir=str(self.log_dir))
-        
-        assert logger1 is logger2
-        
-        # Different name should create new logger
-        logger3 = get_logger("different_name", log_dir=str(self.log_dir))
-        assert logger1 is not logger3
-        
-        logger1.close()
-        logger3.close()
-    
-    def test_setup_logging_function(self):
-        """Test setup_logging convenience function"""
-        config = {
-            'name': 'config_logger',
-            'log_dir': str(self.log_dir),
-            'level': logging.DEBUG,
-            'format_type': 'json',
-            'console_output': False,
-            'file_output': True
-        }
-        
-        logger = setup_logging(config)
-        
-        assert logger.name == 'config_logger'
-        assert logger.logger.level == logging.DEBUG
-        
-        logger.info("Test from configured logger", test_key="test_value")
-        
-        log_file = logger.get_log_file_path()
-        assert log_file is not None
-        
-        with open(log_file, 'r') as f:
-            lines = f.readlines()
-            log_entry = json.loads(lines[-1])
-            assert log_entry['message'] == "Test from configured logger"
-            assert log_entry['test_key'] == "test_value"
-        
-        logger.close()
+    assert os.path.exists(temp_log_file)
+    with open(temp_log_file, "r") as f:
+        content = f.read()
+        assert "test_logger" in content
+        assert "Test message" in content
 
-class TestConvenienceFunctions:
-    """Test convenience logging functions"""
+def test_log_pipeline_start_end(temp_log_file, caplog):
+    """Test pipeline start and end logging."""
+    # We use setup_logger with a file to verify file output as well
+    setup_logger(log_file=temp_log_file, enqueue=False)
     
-    def setup_method(self):
-        """Setup test environment"""
-        self.test_dir = tempfile.mkdtemp()
-        self.log_dir = Path(self.test_dir) / "logs"
+    log_pipeline_start("TestPipeline", "run_123", {"param": "value"})
+    log_pipeline_end("TestPipeline", "run_123", 10.5, "success")
     
-    def teardown_method(self):
-        """Cleanup test environment"""
-        shutil.rmtree(self.test_dir)
-    
-    def test_quick_log_functions(self):
-        """Test quick log functions"""
-        # Setup global logger
-        _ = setup_logging({
-            'name': 'quick_logs',
-            'log_dir': str(self.log_dir),
-            'level': logging.DEBUG,
-            'console_output': False,
-            'file_output': True
-        })
-        
-        # Use convenience functions
-        log_debug("Debug message", extra_data="test")
-        log_info("Info message", count=123)
-        log_warning("Warning message")
-        log_error("Error message")
-        
-        logger = get_logger()
-        log_file = logger.get_log_file_path()
-        
-        with open(log_file, 'r') as f:
-            content = f.read()
-            assert "Debug message" in content
-            assert "Info message" in content
-            assert "Warning message" in content
-            assert "Error message" in content
-        
-        logger.close()
-    
-    def test_quick_detection_log(self):
-        """Test quick detection log function"""
-        _ = setup_logging({
-            'name': 'quick_detection',
-            'log_dir': str(self.log_dir),
-            'level': logging.INFO,
-            'console_output': False,
-            'file_output': True
-        })
-        
-        log_detection(
-            image_path="/test/image.jpg",
-            detected_class="medicine",
-            confidence=0.88,
-            channel="medical"
-        )
-        
-        logger = get_logger()
-        log_file = logger.get_log_file_path()
-        
-        with open(log_file, 'r') as f:
-            content = f.read()
-            assert "medicine" in content
-            assert "0.88" in content
-            assert "medical" in content
-        
-        logger.close()
+    assert os.path.exists(temp_log_file)
+    with open(temp_log_file, "r", encoding="utf-8") as f:
+        content = f.read()
+        assert "Starting pipeline: TestPipeline" in content
+        assert "run_123" in content
+        assert "Pipeline completed: TestPipeline" in content
+        assert "10.50 seconds" in content
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+def test_log_task_start_end(temp_log_file):
+    """Test task start and end logging."""
+    setup_logger(log_file=temp_log_file, enqueue=False)
+    
+    log_task_start("TestTask", "task_456")
+    log_task_end("TestTask", "task_456", 5.2, True)
+    
+    with open(temp_log_file, "r", encoding="utf-8") as f:
+        content = f.read()
+        assert "Starting task: TestTask" in content
+        assert "task_456" in content
+        assert "Task completed: TestTask" in content
+
+def test_log_detection_results(temp_log_file):
+    """Test logging of YOLO detection results."""
+    setup_logger(log_file=temp_log_file, enqueue=False)
+    
+    detections = [
+        {"class": "medicine", "confidence": 0.9},
+        {"class": "medicine", "confidence": 0.85},
+        {"class": "bottle", "confidence": 0.7}
+    ]
+    
+    log_detection_results(detections, "yolov8n", 0.5)
+    
+    with open(temp_log_file, "r", encoding="utf-8") as f:
+        content = f.read()
+        assert "Detection Results" in content
+        assert "medicine: 2" in content
+        assert "bottle: 1" in content
+        assert "High confidence (>0.8): 2" in content
+
+def test_log_error_with_context(temp_log_file):
+    """Test error logging with context."""
+    setup_logger(log_file=temp_log_file, enqueue=False)
+    
+    try:
+        raise ValueError("Something went wrong")
+    except Exception as e:
+        log_error_with_context(e, {"step": "ingestion", "id": "msg_001"})
+    
+    with open(temp_log_file, "r", encoding="utf-8") as f:
+        content = f.read()
+        assert "Error occurred: ValueError" in content
+        assert "Something went wrong" in content
+        assert "step: ingestion" in content
+        assert "id: msg_001" in content
+        assert "Traceback" in content

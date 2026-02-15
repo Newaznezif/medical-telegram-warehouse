@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, Depends, HTTPException
+﻿from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -126,7 +126,7 @@ async def get_channels():
 async def get_detections(
     limit: int = 50,
     min_confidence: float = 0.5,
-    channel: Optional[str] = None
+    channel: Optional[str] = Query(None)
 ):
     """Get YOLO detection results"""
     # Mock data - will be replaced with database
@@ -137,12 +137,13 @@ async def get_detections(
     
     for i in range(min(limit, 20)):
         channel_name = channel if channel else sample_channels[i % len(sample_channels)]
+        conf_val = 0.5 + (i * 0.02)
         detections.append({
             "detection_id": f"det_{i:04d}",
             "image_name": f"image_{i:03d}.jpg",
             "channel_name": channel_name,
             "detected_class": sample_classes[i % len(sample_classes)],
-            "confidence": round(float(0.5 + (i * 0.02)), 2),
+            "confidence": float(f"{conf_val:.2f}"),
             "product_category": "medical" if i % 3 == 0 else "cosmetic",
             "date_str": "2024-01-15",
             "processed_at": "2024-01-15T10:30:00"
@@ -190,7 +191,7 @@ async def get_detection_stats():
     }
 
 @app.get("/api/v1/messages")
-async def get_messages(limit: int = 50, channel: Optional[str] = None):
+async def get_messages(limit: int = 50, channel: Optional[str] = Query(None)):
     """Get Telegram messages"""
     # Mock data
     messages = []
