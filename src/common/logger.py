@@ -38,6 +38,7 @@ def setup_logger(
     log_file: Optional[str] = None,
     rotation: str = "500 MB",
     retention: str = "30 days",
+    enqueue: bool = True,
 ) -> logger:
     """
     Setup Loguru logger with configuration.
@@ -99,7 +100,7 @@ def setup_logger(
             compression="zip",
             backtrace=True,
             diagnose=True,
-            enqueue=True,  # Async logging
+            enqueue=enqueue,  # Async logging if True
         )
     
     # Also add error log file
@@ -125,7 +126,6 @@ def setup_logger(
 
 def log_pipeline_start(pipeline_name: str, run_id: str, config: dict) -> None:
     """Log pipeline start with configuration."""
-    logger = setup_logger()
     
     logger.info(f"🚀 Starting pipeline: {pipeline_name}")
     logger.info(f"📝 Run ID: {run_id}")
@@ -135,7 +135,6 @@ def log_pipeline_start(pipeline_name: str, run_id: str, config: dict) -> None:
 
 def log_pipeline_end(pipeline_name: str, run_id: str, duration: float, status: str) -> None:
     """Log pipeline completion."""
-    logger = setup_logger()
     
     if status == "success":
         logger.success(f"✅ Pipeline completed: {pipeline_name}")
@@ -149,13 +148,11 @@ def log_pipeline_end(pipeline_name: str, run_id: str, duration: float, status: s
 
 def log_task_start(task_name: str, task_id: str) -> None:
     """Log task start."""
-    logger = setup_logger()
     logger.info(f"▶️  Starting task: {task_name} (ID: {task_id})")
 
 
 def log_task_end(task_name: str, task_id: str, duration: float, success: bool) -> None:
     """Log task completion."""
-    logger = setup_logger()
     
     if success:
         logger.success(f"✓ Task completed: {task_name}")
@@ -168,7 +165,6 @@ def log_task_end(task_name: str, task_id: str, duration: float, success: bool) -
 
 def log_detection_results(detections: list, model: str, confidence_threshold: float) -> None:
     """Log YOLO detection results."""
-    logger = setup_logger()
     
     if not detections:
         logger.warning(f"No detections found with model: {model}")
@@ -196,7 +192,6 @@ def log_detection_results(detections: list, model: str, confidence_threshold: fl
 
 def log_database_stats(engine, table_name: str) -> None:
     """Log database table statistics."""
-    logger = setup_logger()
     
     try:
         with engine.connect() as conn:
@@ -220,7 +215,6 @@ def log_database_stats(engine, table_name: str) -> None:
 
 def log_api_health(api_url: str, response_time: float, status_code: int) -> None:
     """Log API health check results."""
-    logger = setup_logger()
     
     if 200 <= status_code < 300:
         logger.success(f"🌐 API Health: {api_url}")
@@ -234,8 +228,6 @@ def log_api_health(api_url: str, response_time: float, status_code: int) -> None
 def log_system_metrics() -> None:
     """Log current system metrics."""
     import psutil
-    
-    logger = setup_logger()
     
     cpu_percent = psutil.cpu_percent(interval=1)
     memory = psutil.virtual_memory()
@@ -257,7 +249,6 @@ def log_system_metrics() -> None:
 
 def log_error_with_context(error: Exception, context: dict = None) -> None:
     """Log error with context information."""
-    logger = setup_logger()
     
     logger.error(f"💥 Error occurred: {type(error).__name__}")
     logger.error(f"   Message: {str(error)}")

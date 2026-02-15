@@ -12,16 +12,10 @@ if project_root not in sys.path:
 from src.etl import ingest_data, clean_data, load_to_db
 from src.analytics import calculate_kpis, detect_anomalies
 
+from src.common.logger import setup_logger, log_pipeline_start, log_pipeline_end
+
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler("pipeline.log")
-    ]
-)
-logger = logging.getLogger("MedicalPipeline")
+logger = setup_logger("MedicalPipeline")
 
 def run_pipeline() -> Optional[bool]:
     """

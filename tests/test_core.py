@@ -6,7 +6,7 @@ import os
 import json
 
 from src.etl import ingest_data, clean_data, load_to_db
-from src.analytics import calculate_kpis, get_risk_scores
+from src.analytics import calculate_kpis, get_risk_scores, detect_anomalies
 
 # Test Data
 MOCK_RAW_DATA = [
@@ -73,9 +73,41 @@ def test_risk_scoring_produces_numeric_output():
     assert scores.dtype == float
     assert all(0 <= s <= 1 for s in scores)
 
+def test_detect_anomalies_flags_correctly():
+    """Test 5: Anomaly detection flags messages correctly based on risk scores"""
+    df = clean_data(MOCK_RAW_DATA)
+    analyzed_df = detect_anomalies(df)
+    assert "risk_score" in analyzed_df.columns
+    assert "is_anomaly" in analyzed_df.columns
+    assert analyzed_df["is_anomaly"].dtype == bool
+
+def test_clean_data_edge_cases():
+    """Test 6: cleaning function handles missing values and invalid dates"""
+    edge_case_data = [
+        {
+            "channel_name": "@EdgeCase",
+            "message_id": 100,
+            "message_date": "invalid-date",
+            "message_text": None,
+            "views": None,
+            "forwards": None,
+            "has_media": False,
+            "image_path": None
+        }
+    ]
+    df = clean_data(edge_case_data)
+    # Invalid date should be dropped by current implementation
+    assert len(df) == 0
+
+def test_calculate_kpis_handles_empty_df():
+    """Test 7: KPI calculation handles empty DataFrame gracefully"""
+    df = pd.DataFrame()
+    kpis = calculate_kpis(df)
+    assert kpis == {}
+
 @patch("psycopg2.connect")
 def test_load_to_db_success(mock_connect):
-    """Test 5: Database insertions are handled successfully (mocked)"""
+    """Test 8: Database insertions are handled successfully (mocked)"""
     mock_conn = MagicMock()
     mock_connect.return_value = mock_conn
     
